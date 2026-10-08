@@ -62,7 +62,7 @@ function LoginForm() {
           <span>Curatorial Access</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-          Sign In to PraGana
+          Sign In to Imagini
         </h1>
         <p className="mt-2 text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
           Enter your curator credentials to manage your 3D digital museum, exhibitions, and artwork slots.

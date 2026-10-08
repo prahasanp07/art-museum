@@ -70,7 +70,7 @@ export default function DashboardPage() {
               id: user.id,
               username: user.user_metadata?.username || user.email?.split('@')[0] || 'curator',
               display_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'Curator',
-              bio: 'Curator at PraGana Digital Museum',
+              bio: 'Curator at Imagini Digital Museum',
               avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
               created_at: new Date().toISOString(),
             };

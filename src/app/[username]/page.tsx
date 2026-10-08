@@ -70,17 +70,17 @@ async function fetchGalleryData(username: string): Promise<GalleryWithArtworks> 
           const hydratedSlots =
             !slotsErr && slots && slots.length > 0
               ? slots.map((s: any) => {
-                  const rawArt = s.artwork;
-                  const artwork = Array.isArray(rawArt) ? (rawArt[0] ?? null) : (rawArt ?? null);
-                  return {
-                    id: s.id,
-                    gallery_id: s.gallery_id,
-                    slot_identifier: s.slot_identifier,
-                    artwork_id: s.artwork_id,
-                    created_at: s.created_at,
-                    artwork,
-                  };
-                })
+                const rawArt = s.artwork;
+                const artwork = Array.isArray(rawArt) ? (rawArt[0] ?? null) : (rawArt ?? null);
+                return {
+                  id: s.id,
+                  gallery_id: s.gallery_id,
+                  slot_identifier: s.slot_identifier,
+                  artwork_id: s.artwork_id,
+                  created_at: s.created_at,
+                  artwork,
+                };
+              })
               : fallback.slots;
 
           return {
@@ -127,7 +127,7 @@ export async function generateMetadata({
   const gallery = await fetchGalleryData(username);
 
   return {
-    title: `${gallery.profile.display_name || username}'s 3D Gallery | PraGana`,
+    title: `${gallery.profile.display_name || username}'s 3D Gallery | Imagini`,
     description:
       gallery.profile.bio ||
       `Explore ${username}'s spatial 3D art exhibition hall in 60fps WebGL.`,

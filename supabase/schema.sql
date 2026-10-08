@@ -1,5 +1,5 @@
 -- ==============================================================================
--- PraGana 3D DIGITAL ART MUSEUM - COMPLETE SUPABASE SCHEMA & STORAGE
+-- Imagini - 3D DIGITAL ART MUSEUM - COMPLETE SUPABASE SCHEMA & STORAGE
 -- Run this complete script in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/_/sql
 -- ==============================================================================

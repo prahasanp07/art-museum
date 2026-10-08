@@ -2,8 +2,8 @@ import React from 'react';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Authentication | PraGana 3D Digital Art Museum',
-  description: 'Curatorial atelier access for PraGana 3D digital art museum.',
+  title: 'Authentication | Imagini 3D Digital Art Museum',
+  description: 'Curatorial atelier access for Imagini 3D digital art museum.',
 };
 
 export default function AuthLayout({
@@ -38,13 +38,13 @@ export default function AuthLayout({
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 p-[1px] shadow-lg shadow-cyan-500/20">
             <div className="w-full h-full bg-[#0a0f1d] rounded-[7px] flex items-center justify-center">
               <span className="text-sm font-black bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
-                M
+                IG
               </span>
             </div>
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold tracking-wider text-white uppercase group-hover:text-cyan-400 transition-colors">
-              PraGana
+              Imagini
             </span>
             <span className="text-[9px] tracking-widest text-slate-400 uppercase -mt-1 font-mono">
               3D Digital Art Museum
@@ -73,7 +73,7 @@ export default function AuthLayout({
           <span>Curatorial Security Infrastructure Active</span>
         </div>
         <p className="tracking-widest uppercase">
-          &copy; 2026 PraGana Atelier Systems
+          &copy; 2026 PraGana Innovations- 3D Digital Art Systems
         </p>
       </footer>
     </div>

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'PraGana | 3D Digital Art Museum',
+  title: 'Imagini | 3D Digital Art Museum',
   description:
     'Multi-tenant B2B SaaS platform where digital creators host personalized, 60fps 3D scrollytelling art galleries.',
 };

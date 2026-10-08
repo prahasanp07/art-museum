@@ -43,13 +43,13 @@ export function Navbar() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-500 to-fuchsia-500 flex items-center justify-center p-[1px] shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
             <div className="w-full h-full bg-slate-950 rounded-[7px] flex items-center justify-center">
               <span className="text-sm font-black bg-gradient-to-r from-cyan-400 to-fuchsia-400 bg-clip-text text-transparent">
-                PG
+                IG
               </span>
             </div>
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold tracking-wider text-white uppercase group-hover:text-cyan-400 transition-colors">
-              PraGana
+              Imagini
             </span>
             <span className="text-[9px] tracking-widest text-slate-400 uppercase -mt-1 font-mono">
               3D Digital Art Museum
