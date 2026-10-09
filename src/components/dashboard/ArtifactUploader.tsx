@@ -449,7 +449,7 @@ export function ArtifactUploader({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-white/5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-[10px] font-mono tracking-widest text-cyan-400 uppercase mb-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-[10px] font-medium tracking-wide text-cyan-400 uppercase mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
               <span>Asset Ingestion Pipeline</span>
             </div>
@@ -457,7 +457,7 @@ export function ArtifactUploader({
               Artifact Uploader & Storage
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Drag and drop high-resolution artwork for automatic client-side compression and instant 3D wall-mounting.
+              Drag and drop high-resolution artwork for automatic compression and instant 3D wall-mounting.
             </p>
           </div>
 
@@ -530,11 +530,10 @@ export function ArtifactUploader({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 group flex flex-col items-center justify-center ${
-              isDragging
-                ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01] shadow-xl shadow-cyan-500/10'
-                : 'border-slate-700/80 hover:border-cyan-500/50 hover:bg-slate-900/40 bg-[#070b15]/50'
-            }`}
+            className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 group flex flex-col items-center justify-center ${isDragging
+              ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01] shadow-xl shadow-cyan-500/10'
+              : 'border-slate-700/80 hover:border-cyan-500/50 hover:bg-slate-900/40 bg-[#070b15]/50'
+              }`}
           >
             <input
               ref={fileInputRef}
@@ -554,7 +553,8 @@ export function ArtifactUploader({
               {isDragging ? 'Drop Image Here to Ingest' : 'Click to Browse or Drag & Drop Artwork'}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm mb-3">
-              Supports <strong className="text-slate-300">PNG, JPG, WebP</strong>. Automatic client-side payload optimization before uploading to Supabase Storage.
+              Automatic asset optimization before uploading to storage. <br />
+              Supports <strong className="text-slate-300">PNG, JPG, WebP</strong>.
             </p>
             <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500">
               <span className="px-2 py-0.5 rounded bg-slate-800 border border-white/5">PNG</span>
@@ -601,7 +601,7 @@ export function ArtifactUploader({
               {/* Form Metadata Fields */}
               <div className="md:col-span-8 space-y-4">
                 <div>
-                  <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase mb-1.5">
                     Artwork Title <span className="text-cyan-400">*</span>
                   </label>
                   <input
@@ -616,7 +616,7 @@ export function ArtifactUploader({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase mb-1.5">
                     Curatorial Description
                   </label>
                   <textarea
@@ -630,7 +630,7 @@ export function ArtifactUploader({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase mb-1.5">
                     External Link / Marketplace URL (Optional)
                   </label>
                   <input
@@ -639,7 +639,7 @@ export function ArtifactUploader({
                     onChange={(e) => setExternalLink(e.target.value)}
                     placeholder="https://superrare.com/artwork/..."
                     disabled={isPending}
-                    className="w-full px-4 py-2.5 bg-[#070b15] border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all disabled:opacity-60 text-xs font-mono"
+                    className="w-full px-4 py-2.5 bg-[#070b15] border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all disabled:opacity-60 text-xs"
                   />
                 </div>
 
@@ -648,7 +648,7 @@ export function ArtifactUploader({
                   <button
                     type="submit"
                     disabled={isPending || !title.trim()}
-                    className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-cyan-500 hover:from-cyan-400 hover:via-indigo-500 hover:to-cyan-400 text-white text-xs font-bold font-mono uppercase tracking-wider shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all duration-200 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-cyan-500 hover:from-cyan-400 hover:via-indigo-500 hover:to-cyan-400 text-white text-xs font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all duration-200 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isPending ? (
                       <>
@@ -667,7 +667,7 @@ export function ArtifactUploader({
                     type="button"
                     onClick={resetStagedFile}
                     disabled={isPending}
-                    className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition-colors"
+                    className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -690,7 +690,7 @@ export function ArtifactUploader({
               <h3 className="text-base font-bold text-white tracking-tight">
                 Curated Artifacts Catalog
               </h3>
-              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+              <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
                 {artworks.length} Artifacts
               </span>
             </div>
@@ -706,7 +706,7 @@ export function ArtifactUploader({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search catalog..."
-              className="w-full pl-9 pr-4 py-2 bg-[#070b15] border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 font-mono"
+              className="w-full pl-9 pr-4 py-2 bg-[#070b15] border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
             />
             <svg
               className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -830,7 +830,7 @@ export function ArtifactUploader({
                   </div>
 
                   {/* Card Action Footer */}
-                  <div className="p-3.5 pt-0 border-t border-white/5 flex items-center justify-between gap-2 mt-2">
+                  <div className="p-3.5 pt-3 border-t border-white/5 flex items-center justify-between gap-2 mt-2">
                     <button
                       type="button"
                       onClick={() => handleCopyUrl(art)}

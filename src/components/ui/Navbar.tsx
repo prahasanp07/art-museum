@@ -51,7 +51,7 @@ export function Navbar() {
             <span className="text-sm font-bold tracking-wider text-white uppercase group-hover:text-cyan-400 transition-colors">
               Imagini
             </span>
-            <span className="text-[9px] tracking-widest text-slate-400 uppercase -mt-1 font-mono">
+            <span className="text-[9px] tracking-wider text-slate-400 uppercase font-medium">
               3D Digital Art Museum
             </span>
           </div>

@@ -5,6 +5,11 @@ import { useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { ActiveProp, GalleryWithArtworks, Gallery } from '@/lib/types';
+import {
+  WALL_MATERIAL_PRESETS,
+  FLOOR_MATERIAL_PRESETS,
+  getProceduralMaterialTexture,
+} from '@/lib/materials';
 
 /**
  * Standard paths for interior wall KTX2 texture maps
@@ -96,76 +101,56 @@ function TextureApplicator({
   floorTextureId: string;
   targetScene: THREE.Object3D;
 }) {
-  const wallPath = getWallTexturePath(wallTextureId);
-  const floorPath = getFloorTexturePath(floorTextureId);
-
   useEffect(() => {
     if (!targetScene) return;
 
-    let isMounted = true;
-    const loader = new THREE.TextureLoader();
+    // 1. Resolve curated material presets
+    const wallPreset =
+      WALL_MATERIAL_PRESETS[wallTextureId] ||
+      WALL_MATERIAL_PRESETS['minimal-white'];
+    const floorPreset =
+      FLOOR_MATERIAL_PRESETS[floorTextureId] ||
+      FLOOR_MATERIAL_PRESETS['polished-concrete'];
 
-    const applyTexture = (materialName: 'GalleryWall' | 'GalleryFloor', texture: THREE.Texture) => {
-      targetScene.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          const mesh = child as THREE.Mesh;
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    // 2. Generate high-resolution procedural textures (100% reliable, zero network latency)
+    const wallTex = getProceduralMaterialTexture(wallPreset.id);
+    const floorTex = getProceduralMaterialTexture(floorPreset.id);
 
-          materials.forEach((mat) => {
-            if (!mat) return;
-            if (mat.name === materialName && 'map' in mat) {
-              (mat as THREE.MeshStandardMaterial).map = texture;
-              mat.needsUpdate = true;
+    // 3. Traverse target scene and update all architectural surfaces
+    targetScene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+
+        materials.forEach((mat) => {
+          if (!mat) return;
+          const stdMat = mat as THREE.MeshStandardMaterial;
+
+          if (mat.name === 'GalleryWall') {
+            stdMat.color.set(wallPreset.color);
+            stdMat.roughness = wallPreset.roughness;
+            stdMat.metalness = wallPreset.metalness;
+            if (wallTex) {
+              wallTex.repeat.set(wallPreset.repeat[0], wallPreset.repeat[1]);
+              stdMat.map = wallTex;
             }
-          });
-        }
-      });
-    };
-
-    // Safely attempt to load wall texture
-    loader.load(
-      wallPath,
-      (tex) => {
-        if (!isMounted) {
-          tex.dispose();
-          return;
-        }
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(4, 2);
-        applyTexture('GalleryWall', tex);
-      },
-      undefined,
-      (err) => {
-        // Fallback gracefully without breaking React / Three.js scene tree
-        console.warn(`InteriorManager wall texture fallback for "${wallTextureId}":`, err);
+            stdMat.needsUpdate = true;
+          } else if (mat.name === 'GalleryFloor') {
+            stdMat.color.set(floorPreset.color);
+            stdMat.roughness = floorPreset.roughness;
+            stdMat.metalness = floorPreset.metalness;
+            if (floorTex) {
+              floorTex.repeat.set(floorPreset.repeat[0], floorPreset.repeat[1]);
+              stdMat.map = floorTex;
+            }
+            stdMat.needsUpdate = true;
+          }
+        });
       }
-    );
-
-    // Safely attempt to load floor texture
-    loader.load(
-      floorPath,
-      (tex) => {
-        if (!isMounted) {
-          tex.dispose();
-          return;
-        }
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(8, 20);
-        applyTexture('GalleryFloor', tex);
-      },
-      undefined,
-      (err) => {
-        // Fallback gracefully without breaking React / Three.js scene tree
-        console.warn(`InteriorManager floor texture fallback for "${floorTextureId}":`, err);
-      }
-    );
-
-    return () => {
-      isMounted = false;
-    };
-  }, [targetScene, wallPath, floorPath, wallTextureId, floorTextureId]);
+    });
+  }, [targetScene, wallTextureId, floorTextureId]);
 
   return null;
 }

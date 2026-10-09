@@ -4,7 +4,8 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGalleryStore } from '@/store/useGalleryStore';
-import { Artwork, GalleryInteriorConfig, SlotConfiguration } from '@/lib/types';
+import { Artwork, FrameDesign, GalleryInteriorConfig, SlotConfiguration } from '@/lib/types';
+import { FRAME_PROFILES, FRAME_DESIGNS } from '@/lib/mockData';
 
 interface ArtworkPlaneProps {
   artwork: Artwork;
@@ -17,6 +18,7 @@ interface ArtworkPlaneProps {
  * Visual styling and physical molding dimensions for 3D exhibition frames.
  */
 export interface FrameStyle {
+  id?: string;
   name: string;
   color: string;
   roughness: number;
@@ -29,46 +31,20 @@ export interface FrameStyle {
  * Standard curatorial frame profiles mapped to GLB / style identifiers.
  */
 export const FRAME_STYLES: Record<string, FrameStyle> = {
-  'minimal-black': {
-    name: 'Minimal Obsidian',
-    color: '#15171e',
-    roughness: 0.35,
-    metalness: 0.7,
-    border: 0.08,
-    depth: 0.06,
-  },
-  'gilded-wood': {
-    name: 'Gilded Gold',
-    color: '#d4af37',
-    roughness: 0.3,
-    metalness: 0.65,
-    border: 0.1,
-    depth: 0.08,
-  },
-  'brushed-aluminum': {
-    name: 'Brushed Aluminum',
-    color: '#cbd5e1',
-    roughness: 0.25,
-    metalness: 0.9,
-    border: 0.07,
-    depth: 0.05,
-  },
-  'classic-walnut': {
-    name: 'Classic Walnut',
-    color: '#3e2723',
-    roughness: 0.65,
-    metalness: 0.08,
-    border: 0.09,
-    depth: 0.07,
-  },
-  'white-lacquer': {
-    name: 'White Contemporary',
-    color: '#f8fafc',
-    roughness: 0.2,
-    metalness: 0.1,
-    border: 0.07,
-    depth: 0.05,
-  },
+  ...Object.fromEntries(
+    Object.entries(FRAME_PROFILES).map(([key, val]) => [
+      key,
+      {
+        id: val.id,
+        name: val.name,
+        color: val.color,
+        roughness: val.roughness,
+        metalness: val.metalness,
+        border: val.border ?? 0.08,
+        depth: val.depth ?? 0.06,
+      },
+    ])
+  ),
 };
 
 /**
@@ -76,6 +52,13 @@ export const FRAME_STYLES: Record<string, FrameStyle> = {
  */
 export function getFrameStyle(frameGlbId: string = 'minimal-black'): FrameStyle {
   return FRAME_STYLES[frameGlbId] || FRAME_STYLES['minimal-black'];
+}
+
+/**
+ * Resolves physical frame architectural design and mounting geometry.
+ */
+export function getFrameDesign(designId: string = 'classic-box'): FrameDesign {
+  return FRAME_DESIGNS[designId] || FRAME_DESIGNS['classic-box'];
 }
 
 /**
@@ -229,41 +212,71 @@ function ArtworkPlane({
 }
 
 /**
- * InstancedFrame renders a 4-segment 3D molding border using THREE.InstancedMesh.
+ * InstancedFrame renders a 3D architectural frame and mounting design using THREE.InstancedMesh.
  * - Conforms strictly to 02-performance-mandates.md (<200 draw-call budget).
- * - Instead of 4 separate mesh draw calls per artwork, all border segments are
- *   instanced together in a single GPU draw call.
- * - Dynamically scales along X and Y axes to match the artwork's aspect ratio.
+ * - Dynamically adapts geometry across:
+ *   1. 'classic-box' (flush right-angled museum bezel)
+ *   2. 'deep-shadowbox' (extruded depth with perimeter floating reveal channel)
+ *   3. 'passe-partout' (conservation matboard inset surrounded by outer framing trim)
+ *   4. 'tiered-baroque' (8-segment double-step tiered architectural moulding relief)
+ *   5. 'canvas-float' (ultra-slim contemporary floating edge rail)
  */
 function InstancedFrame({
   width,
   height,
   frameStyle,
+  frameDesign,
   hovered,
 }: {
   width: number;
   height: number;
   frameStyle: FrameStyle;
+  frameDesign: FrameDesign;
   hovered: boolean;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const matMeshRef = useRef<THREE.InstancedMesh>(null);
   const dummyRef = useRef(new THREE.Object3D());
   const colorRef = useRef(new THREE.Color());
 
-  const { border, depth, color, roughness, metalness } = frameStyle;
+  const borderMult = frameDesign.borderMultiplier || 1.0;
+  const depthMult = frameDesign.depthMultiplier || 1.0;
+  const border = frameStyle.border * borderMult;
+  const depth = frameStyle.depth * depthMult;
+  const floatingGap = frameDesign.floatingGap || 0;
+  const hasMat = Boolean(frameDesign.hasMat);
+  const matWidth = hasMat ? (frameDesign.matWidth || 0.12) : 0;
+  const isTiered = frameDesign.id === 'tiered-baroque';
 
-  // Single unit cube geometry shared across all 4 instanced border segments
+  const { color, roughness, metalness } = frameStyle;
+
+  // Single unit cube geometry shared across all instanced border segments
   const unitBoxGeometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
   const frameMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color),
+        color: new THREE.Color(1, 1, 1),
         roughness,
         metalness,
         toneMapped: true,
       }),
-    [color, roughness, metalness]
+    [roughness, metalness]
   );
+
+  const matMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(frameDesign.matColor || '#f1f0ea'),
+        roughness: 0.94,
+        metalness: 0.02,
+        toneMapped: true,
+      }),
+    [frameDesign.matColor]
+  );
+
+  // Opening boundary between the inner mat/gap and the outer moulding
+  const openingW = width + (floatingGap + matWidth) * 2;
+  const openingH = height + (floatingGap + matWidth) * 2;
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -272,49 +285,162 @@ function InstancedFrame({
     const dummy = dummyRef.current;
     const activeColor = colorRef.current.set(hovered ? '#38bdf8' : color);
 
-    // 0: Top Molding Bar
-    dummy.position.set(0, (height + border) / 2, depth / 2);
-    dummy.scale.set(width + border * 2, border, depth);
-    dummy.quaternion.identity();
-    dummy.updateMatrix();
-    mesh.setMatrixAt(0, dummy.matrix);
-    mesh.setColorAt(0, activeColor);
+    if (isTiered) {
+      // 8-instance stepped moulding relief: 0-3 outer step, 4-7 inner stepped bevel fillet
+      const outerBorder = border * 0.65;
+      const innerBorder = border * 0.45;
+      const outerDepth = depth;
+      const innerDepth = depth * 0.82;
 
-    // 1: Bottom Molding Bar
-    dummy.position.set(0, -(height + border) / 2, depth / 2);
-    dummy.scale.set(width + border * 2, border, depth);
-    dummy.quaternion.identity();
-    dummy.updateMatrix();
-    mesh.setMatrixAt(1, dummy.matrix);
-    mesh.setColorAt(1, activeColor);
+      // Outer tier
+      dummy.position.set(0, (openingH + innerBorder * 2 + outerBorder) / 2, outerDepth / 2);
+      dummy.scale.set(openingW + (innerBorder + outerBorder) * 2, outerBorder, outerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(0, dummy.matrix);
+      mesh.setColorAt(0, activeColor);
 
-    // 2: Left Molding Bar
-    dummy.position.set(-(width + border) / 2, 0, depth / 2);
-    dummy.scale.set(border, height, depth);
-    dummy.quaternion.identity();
-    dummy.updateMatrix();
-    mesh.setMatrixAt(2, dummy.matrix);
-    mesh.setColorAt(2, activeColor);
+      dummy.position.set(0, -(openingH + innerBorder * 2 + outerBorder) / 2, outerDepth / 2);
+      dummy.scale.set(openingW + (innerBorder + outerBorder) * 2, outerBorder, outerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(1, dummy.matrix);
+      mesh.setColorAt(1, activeColor);
 
-    // 3: Right Molding Bar
-    dummy.position.set((width + border) / 2, 0, depth / 2);
-    dummy.scale.set(border, height, depth);
-    dummy.quaternion.identity();
-    dummy.updateMatrix();
-    mesh.setMatrixAt(3, dummy.matrix);
-    mesh.setColorAt(3, activeColor);
+      dummy.position.set(-(openingW + innerBorder * 2 + outerBorder) / 2, 0, outerDepth / 2);
+      dummy.scale.set(outerBorder, openingH + innerBorder * 2, outerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(2, dummy.matrix);
+      mesh.setColorAt(2, activeColor);
+
+      dummy.position.set((openingW + innerBorder * 2 + outerBorder) / 2, 0, outerDepth / 2);
+      dummy.scale.set(outerBorder, openingH + innerBorder * 2, outerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(3, dummy.matrix);
+      mesh.setColorAt(3, activeColor);
+
+      // Inner stepped tier
+      dummy.position.set(0, (openingH + innerBorder) / 2, innerDepth / 2);
+      dummy.scale.set(openingW + innerBorder * 2, innerBorder, innerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(4, dummy.matrix);
+      mesh.setColorAt(4, activeColor);
+
+      dummy.position.set(0, -(openingH + innerBorder) / 2, innerDepth / 2);
+      dummy.scale.set(openingW + innerBorder * 2, innerBorder, innerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(5, dummy.matrix);
+      mesh.setColorAt(5, activeColor);
+
+      dummy.position.set(-(openingW + innerBorder) / 2, 0, innerDepth / 2);
+      dummy.scale.set(innerBorder, openingH, innerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(6, dummy.matrix);
+      mesh.setColorAt(6, activeColor);
+
+      dummy.position.set((openingW + innerBorder) / 2, 0, innerDepth / 2);
+      dummy.scale.set(innerBorder, openingH, innerDepth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(7, dummy.matrix);
+      mesh.setColorAt(7, activeColor);
+    } else {
+      // 4-instance perimeter moulding frame
+      dummy.position.set(0, (openingH + border) / 2, depth / 2);
+      dummy.scale.set(openingW + border * 2, border, depth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(0, dummy.matrix);
+      mesh.setColorAt(0, activeColor);
+
+      dummy.position.set(0, -(openingH + border) / 2, depth / 2);
+      dummy.scale.set(openingW + border * 2, border, depth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(1, dummy.matrix);
+      mesh.setColorAt(1, activeColor);
+
+      dummy.position.set(-(openingW + border) / 2, 0, depth / 2);
+      dummy.scale.set(border, openingH, depth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(2, dummy.matrix);
+      mesh.setColorAt(2, activeColor);
+
+      dummy.position.set((openingW + border) / 2, 0, depth / 2);
+      dummy.scale.set(border, openingH, depth);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      mesh.setMatrixAt(3, dummy.matrix);
+      mesh.setColorAt(3, activeColor);
+    }
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [width, height, border, depth, color, hovered]);
+  }, [openingW, openingH, border, depth, color, hovered, isTiered]);
+
+  // Passe-Partout Matboard layout effect
+  useLayoutEffect(() => {
+    if (!hasMat || !matMeshRef.current) return;
+    const matMesh = matMeshRef.current;
+    const dummy = dummyRef.current;
+    const matDepth = depth * 0.35;
+    const matZ = depth * 0.18;
+
+    dummy.position.set(0, (height + matWidth) / 2, matZ);
+    dummy.scale.set(width + matWidth * 2, matWidth, matDepth);
+    dummy.quaternion.identity();
+    dummy.updateMatrix();
+    matMesh.setMatrixAt(0, dummy.matrix);
+
+    dummy.position.set(0, -(height + matWidth) / 2, matZ);
+    dummy.scale.set(width + matWidth * 2, matWidth, matDepth);
+    dummy.quaternion.identity();
+    dummy.updateMatrix();
+    matMesh.setMatrixAt(1, dummy.matrix);
+
+    dummy.position.set(-(width + matWidth) / 2, 0, matZ);
+    dummy.scale.set(matWidth, height, matDepth);
+    dummy.quaternion.identity();
+    dummy.updateMatrix();
+    matMesh.setMatrixAt(2, dummy.matrix);
+
+    dummy.position.set((width + matWidth) / 2, 0, matZ);
+    dummy.scale.set(matWidth, height, matDepth);
+    dummy.quaternion.identity();
+    dummy.updateMatrix();
+    matMesh.setMatrixAt(3, dummy.matrix);
+
+    matMesh.instanceMatrix.needsUpdate = true;
+  }, [width, height, matWidth, depth, hasMat]);
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[unitBoxGeometry, frameMaterial, 4]}
-      castShadow={false}
-      receiveShadow={false}
-    />
+    <group>
+      {/* Outer or Tiered Frame Moulding */}
+      <instancedMesh
+        key={`${frameStyle.id || ''}-${frameDesign.id}-${color}-${roughness}-${metalness}`}
+        ref={meshRef}
+        args={[unitBoxGeometry, frameMaterial, isTiered ? 8 : 4]}
+        castShadow={false}
+        receiveShadow={false}
+      />
+
+      {/* Passe-Partout Archival Matboard */}
+      {hasMat && (
+        <instancedMesh
+          key={`matboard-${frameDesign.id}-${width}-${height}`}
+          ref={matMeshRef}
+          args={[unitBoxGeometry, matMaterial, 4]}
+          castShadow={false}
+          receiveShadow={false}
+        />
+      )}
+    </group>
   );
 }
 
@@ -323,13 +449,15 @@ export interface GallerySlotProps {
   artwork?: Artwork | null;
   interiorConfig?: GalleryInteriorConfig;
   frameGlbId?: string;
+  frameDesignId?: string;
 }
 
 /**
  * GallerySlot renders an architectural exhibition bay for an artwork.
  * Adheres strictly to:
  * - Dynamic bounding box calculation matching artwork aspect ratio.
- * - Selected frame resolution from interior_config (e.g. minimal-black, gilded-wood).
+ * - Selected frame material style (e.g. neo-chrome, matte-brass, floating-shadow-box).
+ * - Selected frame architectural design (e.g. classic-box, deep-shadowbox, passe-partout, tiered-baroque, canvas-float).
  * - Frame meshes rendered via InstancedMesh to maintain strict 200 draw-call budget.
  * - 2D artwork texture mounted on a plane slightly recessed inside the 3D frame geometry.
  * - 03-camera-navigation (Dynamic optimal inspection distance with FOV calculation).
@@ -339,6 +467,7 @@ export function GallerySlot({
   artwork,
   interiorConfig,
   frameGlbId,
+  frameDesignId,
 }: GallerySlotProps) {
   const { camera } = useThree();
   const groupRef = useRef<THREE.Group>(null);
@@ -349,15 +478,36 @@ export function GallerySlot({
     () => config.size[0] / config.size[1]
   );
 
-  // Resolve frame GLB ID from interior_config frames array linking artwork IDs
+  // Resolve frame GLB ID from explicit prop, interiorConfig frames, slot or artwork
   const resolvedFrameGlbId =
     frameGlbId ||
-    interiorConfig?.frames?.find((f) => f.artwork_id === artwork?.id)?.frame_glb_id ||
+    interiorConfig?.frames?.find(
+      (f: any) =>
+        f.slot_identifier === config.identifier ||
+        (artwork?.id && f.artwork_id === artwork.id)
+    )?.frame_glb_id ||
+    (artwork as any)?.frame_glb_id ||
     'minimal-black';
 
   const frameStyle = useMemo(
     () => getFrameStyle(resolvedFrameGlbId),
     [resolvedFrameGlbId]
+  );
+
+  // Resolve frame architectural design geometry
+  const resolvedFrameDesignId =
+    frameDesignId ||
+    interiorConfig?.frames?.find(
+      (f: any) =>
+        f.slot_identifier === config.identifier ||
+        (artwork?.id && f.artwork_id === artwork.id)
+    )?.frame_design_id ||
+    (artwork as any)?.frame_design_id ||
+    'classic-box';
+
+  const frameDesign = useMemo(
+    () => getFrameDesign(resolvedFrameDesignId),
+    [resolvedFrameDesignId]
   );
 
   // =========================================================================
@@ -387,15 +537,20 @@ export function GallerySlot({
   }, [maxWidth, maxHeight, aspectRatio]);
 
   // Recessed plane position: mounted inside the 3D frame's depth
-  const recessedPlaneZ = frameStyle.depth * 0.25;
+  const effectiveDepth = frameStyle.depth * (frameDesign.depthMultiplier || 1.0);
+  const effectiveBorder =
+    frameStyle.border * (frameDesign.borderMultiplier || 1.0) +
+    (frameDesign.floatingGap || 0) +
+    (frameDesign.hasMat ? (frameDesign.matWidth || 0.12) : 0);
+  const recessedPlaneZ = effectiveDepth * 0.25;
 
   const handleClick = (e: { stopPropagation: () => void }) => {
     e.stopPropagation();
     if (!artwork) return;
 
-    // 1. Dynamic bounding box dimensions (width and height including frame borders)
-    const totalArtworkWidth = fittedWidth + frameStyle.border * 2;
-    const totalArtworkHeight = fittedHeight + frameStyle.border * 2;
+    // 1. Dynamic bounding box dimensions (width and height including frame borders & gaps)
+    const totalArtworkWidth = fittedWidth + effectiveBorder * 2;
+    const totalArtworkHeight = fittedHeight + effectiveBorder * 2;
 
     // 2. Camera current FOV in radians & aspect ratio
     const persCamera = camera as THREE.PerspectiveCamera;
@@ -481,32 +636,38 @@ export function GallerySlot({
       {/* 
         1. 3D Architectural Frame via InstancedMesh:
         - Scales dynamically to enclose the artwork's aspect ratio.
-        - Single GPU draw call for all border moldings.
+        - Dynamically applies chosen architectural design (Box, Shadow Box, Passe-Partout, Tiered, Float).
       */}
       <InstancedFrame
         width={fittedWidth}
         height={fittedHeight}
         frameStyle={frameStyle}
+        frameDesign={frameDesign}
         hovered={hovered}
       />
 
       {/* 
         2. Recessed Artwork Backplate:
-        Dark interior backing plane preventing light leaks behind the canvas.
+        Dark interior backing plane preventing light leaks behind the canvas & shadow moat.
       */}
       <mesh
         position={[0, 0, 0.002]}
         castShadow={false}
         receiveShadow={false}
       >
-        <planeGeometry args={[fittedWidth + 0.01, fittedHeight + 0.01]} />
+        <planeGeometry
+          args={[
+            fittedWidth + (frameDesign.floatingGap || 0) * 2 + 0.02,
+            fittedHeight + (frameDesign.floatingGap || 0) * 2 + 0.02,
+          ]}
+        />
         <meshBasicMaterial color="#080a0f" />
       </mesh>
 
       {/* 
         3. Recessed 2D Artwork Texture Plane:
         Mounted on a plane slightly recessed inside the 3D frame geometry (Z = recessedPlaneZ),
-        while the 3D frame moldings project forward to Z = frameStyle.depth.
+        while the 3D frame moldings project forward to Z = effectiveDepth.
       */}
       <group position={[0, 0, recessedPlaneZ]}>
         {artwork ? (
@@ -537,7 +698,7 @@ export function GallerySlot({
         4. Museum Wall Placard beneath the frame
       */}
       {artwork && (
-        <group position={[0, -(fittedHeight / 2 + frameStyle.border + 0.16), 0.02]}>
+        <group position={[0, -(fittedHeight / 2 + effectiveBorder + 0.16), 0.02]}>
           <mesh castShadow={false} receiveShadow={false}>
             <planeGeometry args={[0.6, 0.16]} />
             <meshBasicMaterial color="#0f172a" />

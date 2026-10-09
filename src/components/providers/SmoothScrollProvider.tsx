@@ -121,7 +121,32 @@ export function SmoothScrollProvider({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // 1. Initialize Lenis with manual RAF control (autoRaf: false)
+    // On non-gallery routes (e.g. /dashboard, /login, /register, /), allow full native browser scrolling
+    if (!shouldMountTrack) {
+      if (lenisRef.current) {
+        lenisRef.current.destroy();
+        lenisRef.current = null;
+      }
+      setContextValue({
+        lenis: null,
+        scrollTo: (target) => {
+          if (typeof window === 'undefined') return;
+          if (typeof target === 'number') {
+            window.scrollTo({ top: target, behavior: 'smooth' });
+          } else if (typeof target === 'string') {
+            const el = document.querySelector(target);
+            el?.scrollIntoView({ behavior: 'smooth' });
+          } else if (target instanceof HTMLElement) {
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        },
+        stop: () => {},
+        start: () => {},
+      });
+      return;
+    }
+
+    // 1. Initialize Lenis with manual RAF control (autoRaf: false) for 3D gallery scrollytelling
     const lenis = new Lenis({
       autoRaf: false,
       smoothWheel: true,
@@ -172,6 +197,12 @@ export function SmoothScrollProvider({
       }
     });
 
+    const onResize = () => {
+      lenis.resize();
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener('resize', onResize);
+
     // Provide context methods for 2D UI navigation
     setContextValue({
       lenis,
@@ -185,6 +216,7 @@ export function SmoothScrollProvider({
 
     // Cleanup contract
     return () => {
+      window.removeEventListener('resize', onResize);
       unsubscribeStore();
       lenis.off('scroll', onLenisScroll);
       gsap.ticker.remove(updateTicker);

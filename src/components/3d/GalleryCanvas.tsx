@@ -155,7 +155,7 @@ export function GalleryCanvas({
           onClick={() =>
             setNavigationMode(navigationMode === 'freeroam' ? 'scroll' : 'freeroam')
           }
-          className="absolute top-6 right-6 z-10 pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-full backdrop-blur-md bg-black/60 hover:bg-black/80 border border-white/20 text-white font-mono text-xs transition-all duration-200 shadow-xl hover:border-cyan-400/50 hover:shadow-cyan-500/20 active:scale-95 cursor-pointer"
+          className="absolute top-6 right-6 z-10 pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-full backdrop-blur-md bg-black/60 hover:bg-black/80 border border-white/20 text-white text-xs font-medium transition-all duration-200 shadow-xl hover:border-cyan-400/50 hover:shadow-cyan-500/20 active:scale-95 cursor-pointer"
           data-testid="toggle-navigation-mode"
           aria-label="Toggle navigation mode"
         >

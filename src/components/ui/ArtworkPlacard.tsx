@@ -46,18 +46,18 @@ export function ArtworkPlacard({ artworks, artistName }: ArtworkPlacardProps) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-[11px] font-mono tracking-widest uppercase text-cyan-300">
+            <span className="text-[10px] font-medium tracking-wide uppercase text-cyan-300">
               Inspection Mode &bull; 1.8m
             </span>
           </div>
 
           <button
             onClick={exitInspection}
-            className="text-xs font-mono px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+            className="text-xs font-medium px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
             title="Press Escape to exit"
           >
             <span>Close</span>
-            <kbd className="text-[10px] bg-black/40 px-1 py-0.5 rounded border border-white/10">
+            <kbd className="text-[10px] bg-black/40 px-1.5 py-0.5 rounded border border-white/10 font-mono">
               ESC
             </kbd>
           </button>

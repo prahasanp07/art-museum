@@ -8,7 +8,7 @@ import { connection } from 'next/server';
 
 interface GalleryPageProps {
   params: Promise<{ username: string }>;
-  searchParams?: Promise<{ template?: string }>;
+  searchParams?: Promise<{ template?: string; wall?: string; floor?: string }>;
 }
 
 /**
@@ -139,10 +139,12 @@ async function GalleryContent({ params, searchParams }: GalleryPageProps) {
   const { username } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const gallery = await fetchGalleryData(username);
-
-  const finalGallery = resolvedSearchParams?.template
-    ? { ...gallery, template_id: resolvedSearchParams.template }
-    : gallery;
+  const finalGallery: GalleryWithArtworks = {
+    ...gallery,
+    ...(resolvedSearchParams?.template ? { template_id: resolvedSearchParams.template } : {}),
+    ...(resolvedSearchParams?.wall ? { wall_texture_id: resolvedSearchParams.wall } : {}),
+    ...(resolvedSearchParams?.floor ? { floor_texture_id: resolvedSearchParams.floor } : {}),
+  };
 
   return <ClientGalleryView initialGallery={finalGallery} username={username} />;
 }

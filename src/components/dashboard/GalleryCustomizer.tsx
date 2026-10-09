@@ -1,18 +1,30 @@
 'use client';
 
-import React, { useState, useTransition, useMemo } from 'react';
+import React, { useState, useEffect, useTransition, useMemo } from 'react';
 import Link from 'next/link';
 import { Gallery, Artwork, SlotConfiguration } from '@/lib/types';
-import { GALLERY_SLOT_CONFIGS } from '@/lib/mockData';
+import {
+  GALLERY_SLOT_CONFIGS,
+  FRAME_PROFILES,
+  FRAME_PROFILE_LIST,
+  FRAME_DESIGNS,
+  FRAME_DESIGN_LIST,
+} from '@/lib/mockData';
 import { saveGalleryCustomization, upsertGallerySlotAction } from '@/lib/actions/gallery';
+
+import { WALL_MATERIAL_PRESETS, FLOOR_MATERIAL_PRESETS } from '@/lib/materials';
 
 export interface GalleryCustomizerProps {
   gallery: Gallery;
   username: string;
   artworks: Artwork[];
   slotMap: Record<string, string | null>;
+  frameMap?: Record<string, string>;
+  frameDesignMap?: Record<string, string>;
   onUpdateGallery: (updated: Partial<Gallery>) => void;
   onAssignSlot: (slotIdentifier: string, artworkId: string | null) => void;
+  onAssignFrame?: (slotIdentifier: string, frameId: string) => void;
+  onAssignFrameDesign?: (slotIdentifier: string, designId: string) => void;
 }
 
 const ARCHITECTURAL_TEMPLATES = [
@@ -36,19 +48,8 @@ const ARCHITECTURAL_TEMPLATES = [
   },
 ];
 
-const WALL_MATERIALS = [
-  { id: 'minimal-white', name: 'Minimalist White Stucco' },
-  { id: 'raw-concrete', name: 'Architectural Raw Concrete' },
-  { id: 'dark-slate', name: 'Matte Obsidian Slate' },
-  { id: 'sandstone', name: 'Luminous Warm Sandstone' },
-];
-
-const FLOOR_MATERIALS = [
-  { id: 'polished-concrete', name: 'Polished Terrazzo Concrete' },
-  { id: 'hardwood-oak', name: 'Herringbone Hardwood Oak' },
-  { id: 'dark-terrazzo', name: 'Basalt Dark Terrazzo' },
-  { id: 'marble-tile', name: 'Carrara Polished Marble' },
-];
+const WALL_MATERIALS = Object.values(WALL_MATERIAL_PRESETS);
+const FLOOR_MATERIALS = Object.values(FLOOR_MATERIAL_PRESETS);
 
 const AMBIENT_PRESETS = [
   { label: 'Museum Daylight', hex: '#ffffff' },
@@ -63,8 +64,12 @@ export function GalleryCustomizer({
   username,
   artworks,
   slotMap,
+  frameMap,
+  frameDesignMap,
   onUpdateGallery,
   onAssignSlot,
+  onAssignFrame,
+  onAssignFrameDesign,
 }: GalleryCustomizerProps) {
   // Local environment control state
   const [templateId, setTemplateId] = useState<string>(
@@ -82,6 +87,102 @@ export function GalleryCustomizer({
   const [isPublished, setIsPublished] = useState<boolean>(
     Boolean(gallery.is_published)
   );
+
+  // Local frame material style mapping state
+  const [localFrameMap, setLocalFrameMap] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = { ...(frameMap || {}) };
+    if (gallery.interior_config?.frames) {
+      gallery.interior_config.frames.forEach((f) => {
+        if (f.slot_identifier && !initial[f.slot_identifier]) {
+          initial[f.slot_identifier] = f.frame_glb_id;
+        }
+      });
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    if (frameMap) {
+      setLocalFrameMap((prev) => ({ ...prev, ...frameMap }));
+    }
+  }, [frameMap]);
+
+  // Local frame architectural design mapping state
+  const [localFrameDesignMap, setLocalFrameDesignMap] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = { ...(frameDesignMap || {}) };
+    if (gallery.interior_config?.frames) {
+      gallery.interior_config.frames.forEach((f) => {
+        if (f.slot_identifier && f.frame_design_id && !initial[f.slot_identifier]) {
+          initial[f.slot_identifier] = f.frame_design_id;
+        }
+      });
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    if (frameDesignMap) {
+      setLocalFrameDesignMap((prev) => ({ ...prev, ...frameDesignMap }));
+    }
+  }, [frameDesignMap]);
+
+  const handleFrameChange = (slotIdentifier: string, frameId: string) => {
+    setLocalFrameMap((prev) => ({ ...prev, [slotIdentifier]: frameId }));
+    if (onAssignFrame) {
+      onAssignFrame(slotIdentifier, frameId);
+    } else {
+      const existingFrames = gallery.interior_config?.frames || [];
+      const otherFrames = existingFrames.filter((f) => f.slot_identifier !== slotIdentifier);
+      const currentDesignId = localFrameDesignMap[slotIdentifier] || 'classic-box';
+      const updatedFrames = [
+        ...otherFrames,
+        {
+          slot_identifier: slotIdentifier,
+          frame_glb_id: frameId,
+          frame_design_id: currentDesignId,
+        },
+      ];
+      onUpdateGallery({
+        interior_config: {
+          ...(gallery.interior_config || {
+            wall_material_id: wallMaterial,
+            floor_material_id: floorMaterial,
+            ceiling_type: 'recessed-spotlight',
+          }),
+          frames: updatedFrames,
+        },
+      });
+    }
+  };
+
+  const handleFrameDesignChange = (slotIdentifier: string, designId: string) => {
+    setLocalFrameDesignMap((prev) => ({ ...prev, [slotIdentifier]: designId }));
+    if (onAssignFrameDesign) {
+      onAssignFrameDesign(slotIdentifier, designId);
+    } else {
+      const existingFrames = gallery.interior_config?.frames || [];
+      const otherFrames = existingFrames.filter((f) => f.slot_identifier !== slotIdentifier);
+      const currentFrameGlbId = localFrameMap[slotIdentifier] || 'neo-chrome';
+      const updatedFrames = [
+        ...otherFrames,
+        {
+          slot_identifier: slotIdentifier,
+          frame_glb_id: currentFrameGlbId,
+          frame_design_id: designId,
+        },
+      ];
+      onUpdateGallery({
+        interior_config: {
+          ...(gallery.interior_config || {
+            wall_material_id: wallMaterial,
+            floor_material_id: floorMaterial,
+            ceiling_type: 'recessed-spotlight',
+          }),
+          frames: updatedFrames,
+        },
+      });
+    }
+  };
 
   // Slot modal picker state
   const [activeSlotModal, setActiveSlotModal] = useState<SlotConfiguration | null>(null);
@@ -220,7 +321,7 @@ export function GalleryCustomizer({
         {/* Header Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 mb-8 pb-6 border-b border-white/5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-[10px] font-mono tracking-widest text-cyan-400 uppercase mb-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-[10px] font-medium tracking-wide text-cyan-400 uppercase mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
               <span>Spatial Environment &amp; Customization</span>
             </div>
@@ -237,7 +338,7 @@ export function GalleryCustomizer({
             <Link
               href={`/${username}`}
               target="_blank"
-              className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/10 text-xs font-mono transition-colors flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-white/10 text-xs font-medium transition-colors flex items-center gap-1.5 hover:border-white/20"
             >
               <span>Preview 3D</span>
               <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -249,7 +350,7 @@ export function GalleryCustomizer({
             <button
               onClick={handleSaveChanges}
               disabled={isSyncing}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-cyan-500 hover:from-cyan-400 hover:via-indigo-500 hover:to-cyan-400 text-white font-mono text-xs font-bold tracking-wider uppercase shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-cyan-500 hover:from-cyan-400 hover:via-indigo-500 hover:to-cyan-400 text-white text-xs font-semibold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSyncing ? (
                 <>
@@ -298,8 +399,8 @@ export function GalleryCustomizer({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Architectural Template Selectors */}
           <div className="lg:col-span-7 space-y-3.5">
-            <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase">
-              3D Architectural Template (template_id)
+            <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+              3D Architectural Template
             </label>
             <div className="grid grid-cols-1 gap-3">
               {ARCHITECTURAL_TEMPLATES.map((tmpl) => {
@@ -308,18 +409,16 @@ export function GalleryCustomizer({
                   <div
                     key={tmpl.id}
                     onClick={() => handleTemplateChange(tmpl.id)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex items-start gap-3.5 ${
-                      isSelected
-                        ? 'bg-cyan-950/30 border-cyan-400/60 shadow-lg shadow-cyan-500/10'
-                        : 'bg-[#070b15]/60 border-white/5 hover:border-white/15 hover:bg-[#070b15]'
-                    }`}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex items-start gap-3.5 ${isSelected
+                      ? 'bg-cyan-950/30 border-cyan-400/60 shadow-lg shadow-cyan-500/10'
+                      : 'bg-[#070b15]/60 border-white/5 hover:border-white/15 hover:bg-[#070b15]'
+                      }`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                        isSelected
-                          ? 'border-cyan-400 bg-cyan-400 text-slate-950'
-                          : 'border-slate-600 bg-transparent'
-                      }`}
+                      className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${isSelected
+                        ? 'border-cyan-400 bg-cyan-400 text-slate-950'
+                        : 'border-slate-600 bg-transparent'
+                        }`}
                     >
                       {isSelected && (
                         <div className="w-2 h-2 rounded-full bg-slate-950" />
@@ -349,8 +448,8 @@ export function GalleryCustomizer({
           <div className="lg:col-span-5 space-y-6">
             {/* Ambient Lighting Color Picker with Live Hex */}
             <div className="bg-[#070b15]/60 border border-white/5 rounded-xl p-4 space-y-3">
-              <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase">
-                Custom Ambient Light (custom_ambient_light_hex)
+              <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+                Custom Ambient Lighting
               </label>
 
               <div className="flex items-center gap-3">
@@ -396,11 +495,10 @@ export function GalleryCustomizer({
                     key={preset.hex}
                     type="button"
                     onClick={() => handleAmbientLightChange(preset.hex)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors flex items-center gap-1.5 ${
-                      ambientLightHex.toLowerCase() === preset.hex.toLowerCase()
-                        ? 'bg-cyan-950 border border-cyan-500/50 text-cyan-300'
-                        : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5'
-                    }`}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors flex items-center gap-1.5 ${ambientLightHex.toLowerCase() === preset.hex.toLowerCase()
+                      ? 'bg-cyan-950 border border-cyan-500/50 text-cyan-300'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5'
+                      }`}
                   >
                     <span
                       className="w-2 h-2 rounded-full border border-white/20"
@@ -412,56 +510,106 @@ export function GalleryCustomizer({
               </div>
             </div>
 
-            {/* Wall & Floor Material Dropdowns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase mb-1.5">
-                  Wall Material
+            {/* Wall Material Swatch Selection */}
+            <div className="bg-[#070b15]/60 border border-white/5 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+                  Wall Material Surface
                 </label>
-                <select
-                  value={wallMaterial}
-                  onChange={(e) => handleWallMaterialChange(e.target.value)}
-                  className="w-full bg-[#070b15] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
-                >
-                  {WALL_MATERIALS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-[10px] font-medium text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md">
+                  {WALL_MATERIAL_PRESETS[wallMaterial]?.tag || wallMaterial}
+                </span>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {WALL_MATERIALS.map((m) => {
+                  const isSelected = wallMaterial === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => handleWallMaterialChange(m.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${isSelected
+                        ? 'bg-cyan-950/40 border-cyan-400 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-400/50'
+                        : 'bg-[#0b1120]/80 border-white/5 hover:border-white/20 hover:bg-[#0e1629]'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div
+                          className="w-5 h-5 rounded-md border border-white/20 shadow-sm shrink-0"
+                          style={{ backgroundColor: m.color }}
+                        />
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-white/5">
+                          {m.tag}
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-white leading-tight">
+                        {m.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 line-clamp-1 leading-snug">
+                        {m.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-mono tracking-wider text-slate-300 uppercase mb-1.5">
-                  Floor Material
+            {/* Floor Material Swatch Selection */}
+            <div className="bg-[#070b15]/60 border border-white/5 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-300 tracking-wide uppercase">
+                  Floor Material Finish
                 </label>
-                <select
-                  value={floorMaterial}
-                  onChange={(e) => handleFloorMaterialChange(e.target.value)}
-                  className="w-full bg-[#070b15] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono"
-                >
-                  {FLOOR_MATERIALS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-[10px] font-medium text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md">
+                  {FLOOR_MATERIAL_PRESETS[floorMaterial]?.tag || floorMaterial}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {FLOOR_MATERIALS.map((m) => {
+                  const isSelected = floorMaterial === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => handleFloorMaterialChange(m.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${isSelected
+                        ? 'bg-cyan-950/40 border-cyan-400 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-400/50'
+                        : 'bg-[#0b1120]/80 border-white/5 hover:border-white/20 hover:bg-[#0e1629]'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div
+                          className="w-5 h-5 rounded-md border border-white/20 shadow-sm shrink-0"
+                          style={{ backgroundColor: m.color }}
+                        />
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-white/5">
+                          {m.tag}
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-white leading-tight">
+                        {m.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 line-clamp-1 leading-snug">
+                        {m.description}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Public Status Toggle Switch */}
             <div className="bg-[#070b15]/60 border border-white/5 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white uppercase font-mono tracking-wider">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-semibold text-white tracking-wide uppercase">
                     Public Exhibition
                   </span>
                   <span
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-                      isPublished
-                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                        : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
-                    }`}
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isPublished
+                      ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                      : 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                      }`}
                   >
                     {isPublished ? 'Published' : 'Draft / Private'}
                   </span>
@@ -476,16 +624,14 @@ export function GalleryCustomizer({
               <button
                 type="button"
                 onClick={handlePublishToggle}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  isPublished ? 'bg-cyan-500' : 'bg-slate-800 border border-white/10'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isPublished ? 'bg-cyan-500' : 'bg-slate-800 border border-white/10'
+                  }`}
                 role="switch"
                 aria-checked={isPublished}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isPublished ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublished ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>
@@ -505,7 +651,7 @@ export function GalleryCustomizer({
               <h3 className="text-base font-bold text-white tracking-tight">
                 3D Gallery Corridor Slot Mapping
               </h3>
-              <span className="text-xs font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full">
                 6 Physical Bays
               </span>
             </div>
@@ -524,21 +670,20 @@ export function GalleryCustomizer({
             return (
               <div
                 key={slot.identifier}
-                className={`bg-[#070b15]/90 border rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition-all duration-200 group ${
-                  assignedArtwork
-                    ? 'border-cyan-500/30 hover:border-cyan-500/60 shadow-lg shadow-cyan-500/5'
-                    : 'border-white/10 hover:border-white/20'
-                }`}
+                className={`bg-[#070b15]/90 border rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition-all duration-200 group ${assignedArtwork
+                  ? 'border-cyan-500/30 hover:border-cyan-500/60 shadow-lg shadow-cyan-500/5'
+                  : 'border-white/10 hover:border-white/20'
+                  }`}
               >
                 {/* Header: Slot Identifier and Physical Dimension */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                    <span className="text-xs font-mono font-bold text-cyan-300 uppercase">
+                    <span className="text-xs font-bold text-cyan-300 uppercase">
                       {slot.identifier.toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-white/5">
+                  <span className="text-[10px] text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-white/5 font-medium">
                     {slot.size[0]}m &times; {slot.size[1]}m
                   </span>
                 </div>
@@ -556,7 +701,7 @@ export function GalleryCustomizer({
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
-                        <span className="px-3 py-1.5 rounded-lg bg-cyan-500 text-slate-950 font-mono text-[11px] font-bold shadow-lg">
+                        <span className="px-3 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-bold shadow-lg">
                           Change Artwork
                         </span>
                       </div>
@@ -568,12 +713,80 @@ export function GalleryCustomizer({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                       </div>
-                      <span className="text-[11px] font-mono font-semibold">
+                      <span className="text-[11px] font-medium">
                         + Mount Artwork to Bay
                       </span>
                     </div>
                   )}
                 </div>
+
+                {/* Bay Frame Profile & Architectural Design Customizer */}
+                {(() => {
+                  const currentFrameId = localFrameMap[slot.identifier] || assignedArtwork?.frame_glb_id || 'neo-chrome';
+                  const currentFrameProfile = FRAME_PROFILES[currentFrameId] || FRAME_PROFILE_LIST[0];
+                  const currentDesignId = localFrameDesignMap[slot.identifier] || (assignedArtwork as any)?.frame_design_id || 'classic-box';
+                  const currentDesign = FRAME_DESIGNS[currentDesignId] || FRAME_DESIGN_LIST[0];
+
+                  return (
+                    <div className="space-y-1.5 p-2.5 rounded-xl bg-[#030712] border border-white/10">
+                      {/* Frame Material Row */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span
+                            className="w-3 h-3 rounded-full border border-white/20 shrink-0 shadow-sm"
+                            style={{
+                              backgroundColor: currentFrameProfile.color,
+                              boxShadow: currentFrameProfile.metalness > 0.5 ? '0 0 6px rgba(255,255,255,0.3)' : undefined,
+                            }}
+                            title={`Material: ${currentFrameProfile.name} | R: ${currentFrameProfile.roughness} | M: ${currentFrameProfile.metalness}`}
+                          />
+                          <span className="text-[10px] text-slate-400 font-medium truncate">
+                            Material:
+                          </span>
+                        </div>
+
+                        <select
+                          value={currentFrameId}
+                          onChange={(e) => handleFrameChange(slot.identifier, e.target.value)}
+                          className="bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-medium rounded-lg px-2 py-1 border border-white/10 focus:outline-none focus:border-cyan-400 cursor-pointer transition-colors shrink-0 max-w-[130px] truncate"
+                          title="Change frame material & PBR finish"
+                        >
+                          {FRAME_PROFILE_LIST.map((p) => (
+                            <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Frame Architectural Design Geometry Row */}
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <svg className="w-3 h-3 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
+                            <rect x="7" y="7" width="10" height="10" rx="1.5" strokeWidth="1.5" />
+                          </svg>
+                          <span className="text-[10px] text-slate-400 font-medium truncate">
+                            Design:
+                          </span>
+                        </div>
+
+                        <select
+                          value={currentDesignId}
+                          onChange={(e) => handleFrameDesignChange(slot.identifier, e.target.value)}
+                          className="bg-slate-900 hover:bg-slate-800 text-cyan-300 text-[10px] font-medium rounded-lg px-2 py-1 border border-cyan-500/20 focus:outline-none focus:border-cyan-400 cursor-pointer transition-colors shrink-0 max-w-[130px] truncate"
+                          title="Change architectural frame design geometry"
+                        >
+                          {FRAME_DESIGN_LIST.map((d) => (
+                            <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                              {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Footer Controls: Assigned Title & Quick Actions */}
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
@@ -581,7 +794,7 @@ export function GalleryCustomizer({
                     <p className="text-xs font-bold text-white truncate">
                       {assignedArtwork ? assignedArtwork.title : 'Unassigned Bay'}
                     </p>
-                    <p className="text-[10px] font-mono text-slate-500 truncate">
+                    <p className="text-[10px] text-slate-500 truncate">
                       {assignedArtwork ? 'Mounted in 3D scene' : 'Ready for asset mounting'}
                     </p>
                   </div>
@@ -590,7 +803,7 @@ export function GalleryCustomizer({
                     <button
                       type="button"
                       onClick={() => setActiveSlotModal(slot)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-mono transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition-colors"
                       title="Select or change artwork"
                     >
                       {assignedArtwork ? 'Switch' : 'Mount'}
@@ -600,7 +813,7 @@ export function GalleryCustomizer({
                       <button
                         type="button"
                         onClick={() => handleSelectArtworkForSlot(null)}
-                        className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-red-950/60 text-slate-400 hover:text-red-300 text-[11px] font-mono transition-colors"
+                        className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-red-950/60 text-slate-400 hover:text-red-300 text-[11px] font-medium transition-colors"
                         title="Unmount artwork from this bay"
                       >
                         Unmount
@@ -631,7 +844,7 @@ export function GalleryCustomizer({
                     Mount Artwork to {activeSlotModal.identifier.toUpperCase()}
                   </h3>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                <p className="text-xs text-slate-400 mt-0.5">
                   Bay Dimensions: {activeSlotModal.size[0]}m &times; {activeSlotModal.size[1]}m
                 </p>
               </div>
@@ -647,6 +860,103 @@ export function GalleryCustomizer({
               </button>
             </div>
 
+            {/* Frame Customization Controls inside Modal */}
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-white/10 mb-4 shrink-0 space-y-3">
+              {/* Frame Design Selection */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
+                      <rect x="7" y="7" width="10" height="10" rx="1.5" strokeWidth="1.5" />
+                    </svg>
+                    <span>1. Architectural Frame Design:</span>
+                  </span>
+                  {(() => {
+                    const activeDesignId = localFrameDesignMap[activeSlotModal.identifier] || 'classic-box';
+                    const des = FRAME_DESIGNS[activeDesignId] || FRAME_DESIGN_LIST[0];
+                    return (
+                      <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md">
+                        {des.name} ({des.tag})
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {FRAME_DESIGN_LIST.map((d) => {
+                    const isSelected = (localFrameDesignMap[activeSlotModal.identifier] || 'classic-box') === d.id;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => handleFrameDesignChange(activeSlotModal.identifier, d.id)}
+                        className={`p-2 rounded-lg border text-left flex flex-col gap-0.5 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-950/60 border-cyan-400 shadow-sm shadow-cyan-500/20 ring-1 ring-cyan-400/40'
+                            : 'bg-slate-900/80 border-white/10 hover:border-white/20 hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold text-white truncate">
+                          {d.name}
+                        </span>
+                        <span className="text-[9px] text-slate-400 line-clamp-1">
+                          {d.tag}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Frame Material Finish Selection */}
+              <div className="pt-2 border-t border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+                    <span>2. Material PBR Finish:</span>
+                  </span>
+                  {(() => {
+                    const activeFrameId = localFrameMap[activeSlotModal.identifier] || 'neo-chrome';
+                    const prof = FRAME_PROFILES[activeFrameId] || FRAME_PROFILE_LIST[0];
+                    return (
+                      <span className="text-[10px] font-mono text-cyan-400 flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full border border-white/20"
+                          style={{ backgroundColor: prof.color }}
+                        />
+                        {prof.name} (R:{prof.roughness} / M:{prof.metalness})
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {FRAME_PROFILE_LIST.map((p) => {
+                    const isSelected = (localFrameMap[activeSlotModal.identifier] || 'neo-chrome') === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleFrameChange(activeSlotModal.identifier, p.id)}
+                        className={`p-2 rounded-lg border text-left flex items-center gap-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-950/60 border-cyan-400 shadow-sm shadow-cyan-500/20 ring-1 ring-cyan-400/40'
+                            : 'bg-slate-900/80 border-white/10 hover:border-white/20 hover:bg-slate-800'
+                        }`}
+                      >
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        <span className="text-[11px] font-medium text-white truncate">
+                          {p.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* Modal Search Bar & Unmount Option */}
             <div className="space-y-3 mb-4 shrink-0">
               <div className="relative">
@@ -655,7 +965,7 @@ export function GalleryCustomizer({
                   value={modalSearch}
                   onChange={(e) => setModalSearch(e.target.value)}
                   placeholder="Search catalog by title or narrative..."
-                  className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+                  className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
                 <svg
                   className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -670,12 +980,12 @@ export function GalleryCustomizer({
               {/* Quick Unmount Row */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-white/5">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-300 font-mono">Leave bay empty / unassigned:</span>
+                  <span className="text-xs text-slate-300">Leave bay empty / unassigned:</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleSelectArtworkForSlot(null)}
-                  className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/20 text-xs font-mono transition-colors"
+                  className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/20 text-xs font-medium transition-colors"
                 >
                   Clear / Unmount Bay
                 </button>
@@ -685,7 +995,7 @@ export function GalleryCustomizer({
             {/* Modal Artworks List */}
             <div className="overflow-y-auto flex-1 pr-1 space-y-2.5">
               {filteredModalArtworks.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 text-xs font-mono">
+                <div className="py-12 text-center text-slate-500 text-xs">
                   No matching artworks found in catalog.
                 </div>
               ) : (
@@ -698,11 +1008,10 @@ export function GalleryCustomizer({
                       <div
                         key={art.id}
                         onClick={() => handleSelectArtworkForSlot(art.id)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-3 group ${
-                          isCurrentlySelected
-                            ? 'bg-cyan-950/40 border-cyan-400/70 shadow-md shadow-cyan-500/10'
-                            : 'bg-slate-950/80 border-white/5 hover:border-cyan-500/40 hover:bg-slate-900'
-                        }`}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-3 group ${isCurrentlySelected
+                          ? 'bg-cyan-950/40 border-cyan-400/70 shadow-md shadow-cyan-500/10'
+                          : 'bg-slate-950/80 border-white/5 hover:border-cyan-500/40 hover:bg-slate-900'
+                          }`}
                       >
                         <div className="w-14 h-14 rounded-lg bg-slate-900 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
                           {art.storage_url ? (
@@ -730,7 +1039,7 @@ export function GalleryCustomizer({
                           <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
                             {art.description || 'No description'}
                           </p>
-                          <span className="text-[10px] font-mono text-cyan-400">
+                          <span className="text-[10px] font-medium text-cyan-400">
                             {isCurrentlySelected ? 'Currently Mounted' : 'Click to mount'}
                           </span>
                         </div>

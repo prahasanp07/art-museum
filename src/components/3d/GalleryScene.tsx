@@ -17,23 +17,30 @@ interface GallerySceneProps {
 /**
  * Instanced ceiling track lights to adhere strictly to Rule 02:
  * "Identical structural items must utilize <instancedMesh> ... under 200 draw calls"
+ * Track lighting height dynamically mounts to the ceiling of each architectural template.
  */
-function InstancedTrackLights() {
+function InstancedTrackLights({ templateId }: { templateId?: string }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+
+  const trackY = useMemo(() => {
+    if (templateId === 'brutalist-atrium-v1') return 5.65;
+    if (templateId === 'solarium-rotunda-v1' || templateId === 'solarium-v1') return 5.15;
+    return 3.85;
+  }, [templateId]);
 
   // Define track light positions along the corridor length
   const lightPositions: [number, number, number][] = useMemo(
     () => [
-      [0, 3.8, 10],
-      [0, 3.8, 5],
-      [2.5, 3.8, 0],
-      [2.5, 3.8, -6],
-      [0, 3.8, -10],
-      [-2.5, 3.8, -14],
-      [-2.5, 3.8, -20],
-      [0, 3.8, -26],
+      [0, trackY, 10],
+      [0, trackY, 5],
+      [2.5, trackY, 0],
+      [2.5, trackY, -6],
+      [0, trackY, -10],
+      [-2.5, trackY, -14],
+      [-2.5, trackY, -20],
+      [0, trackY, -26],
     ],
-    []
+    [trackY]
   );
 
   useEffect(() => {
@@ -57,7 +64,7 @@ function InstancedTrackLights() {
       receiveShadow={false}
     >
       <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial color="#334155" />
+      <meshBasicMaterial color="#475569" />
     </instancedMesh>
   );
 }
@@ -66,33 +73,69 @@ function InstancedTrackLights() {
  * GalleryScene renders the physical 3D museum corridor structure and mounted artwork slots.
  * Fully compliant with 02-performance-mandates.md:
  * - Zero dynamic shadow casting or receiving
- * - MeshBasicMaterial for architectural surfaces
- * - Instanced track lights
+ * - Instanced track lights adapting to ceiling height
  * - Capped draw calls well below mobile budget (< 50 calls)
  */
 export function GalleryScene({ gallery, profile }: GallerySceneProps) {
-  // Map gallery slots to their corresponding artworks
+  // Map gallery slots to their corresponding artworks and frame overrides
   const slotsWithArtworks = useMemo(() => {
     return GALLERY_SLOT_CONFIGS.map((config) => {
       const match = gallery.slots.find((s) => s.slot_identifier === config.identifier);
+      const frameGlbId =
+        match?.frame_glb_id ||
+        gallery?.interior_config?.frames?.find(
+          (f: any) =>
+            f.slot_identifier === config.identifier ||
+            (match?.artwork?.id && f.artwork_id === match.artwork.id)
+        )?.frame_glb_id;
+
+      const frameDesignId =
+        match?.frame_design_id ||
+        gallery?.interior_config?.frames?.find(
+          (f: any) =>
+            f.slot_identifier === config.identifier ||
+            (match?.artwork?.id && f.artwork_id === match.artwork.id)
+        )?.frame_design_id;
+
       return {
         config,
         artwork: match?.artwork ?? null,
+        frameGlbId,
+        frameDesignId,
       };
     });
   }, [gallery]);
 
+  const isSolarium =
+    gallery.template_id === 'solarium-rotunda-v1' || gallery.template_id === 'solarium-v1';
+  const isBrutalist = gallery.template_id === 'brutalist-atrium-v1';
+
+  const skyColor = isSolarium
+    ? '#fef3c7'
+    : gallery.custom_ambient_light_hex || '#e2e8f0';
+  const ambientIntensity = isSolarium ? 1.05 : isBrutalist ? 0.75 : 0.85;
+
   return (
     <group>
       {/* 0. Canvas Clear Background */}
-      <color attach="background" args={['#070a13']} />
+      <color attach="background" args={[isSolarium ? '#0b1120' : '#070a13']} />
 
       {/* 1. Global Responsive Lighting Architecture */}
       <hemisphereLight
-        args={[gallery.custom_ambient_light_hex || '#e2e8f0', '#0f172a', 0.8]}
+        args={[skyColor, isSolarium ? '#1e293b' : '#0f172a', ambientIntensity]}
       />
-      <directionalLight position={[10, 20, 15]} intensity={1.2} castShadow={false} />
-      <directionalLight position={[-10, 15, -15]} intensity={0.6} castShadow={false} />
+      <directionalLight
+        position={isBrutalist ? [12, 26, 18] : [10, 20, 15]}
+        intensity={isSolarium ? 1.35 : isBrutalist ? 1.3 : 1.15}
+        color={isSolarium ? '#fffbeb' : '#ffffff'}
+        castShadow={false}
+      />
+      <directionalLight
+        position={[-10, 15, -15]}
+        intensity={isSolarium ? 0.75 : 0.55}
+        color={isSolarium ? '#fed7aa' : '#ffffff'}
+        castShadow={false}
+      />
 
       {/* 2. Dynamic Architectural Environment: GLB loading with procedural template fallback */}
       <ArchitecturalEnvironment
@@ -100,14 +143,8 @@ export function GalleryScene({ gallery, profile }: GallerySceneProps) {
         customAmbientColor={gallery.custom_ambient_light_hex}
       />
 
-      {/* 3. Subtle floor grid line accents for spatial depth perception */}
-      <gridHelper
-        args={[60, 30, '#334155', '#1e293b']}
-        position={[0, 0.01, -10]}
-      />
-
-      {/* 5. Instanced Track Lighting System */}
-      <InstancedTrackLights />
+      {/* 4. Instanced Track Lighting System mounted to architectural ceiling */}
+      <InstancedTrackLights templateId={gallery.template_id} />
 
       {/* 6. Dynamic Interior Manager: custom KTX2 textures & activated furniture props */}
       <InteriorManager gallery={gallery} />
@@ -116,11 +153,13 @@ export function GalleryScene({ gallery, profile }: GallerySceneProps) {
       <WayfindingPath />
 
       {/* 8. Mounted Artwork Slots */}
-      {slotsWithArtworks.map(({ config, artwork }) => (
+      {slotsWithArtworks.map(({ config, artwork, frameGlbId, frameDesignId }) => (
         <GallerySlot
           key={config.identifier}
           config={config}
           artwork={artwork}
+          frameGlbId={frameGlbId}
+          frameDesignId={frameDesignId}
           interiorConfig={gallery?.interior_config}
         />
       ))}

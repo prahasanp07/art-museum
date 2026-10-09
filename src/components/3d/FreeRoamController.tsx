@@ -108,7 +108,7 @@ function FreeRoamControllerImpl({
   const lastPointerPosRef = useRef({ x: 0, y: 0 });
   const eulerRef = useRef(new THREE.Euler(0, 0, 0, 'YXZ'));
 
-  // Global unhandledrejection safeguard for pointer lock rate-limiting SecurityError
+  // Global unhandledrejection & pointerlockerror safeguard to prevent Turbopack console errors
   React.useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
@@ -120,9 +120,31 @@ function FreeRoamControllerImpl({
         event.preventDefault();
       }
     };
+
+    // Capture-phase listener stops pointerlockerror from reaching Three.js PointerLockControls
+    const handlePointerLockError = (event: Event) => {
+      event.stopImmediatePropagation();
+    };
+
+    // Filter benign Three.js pointer lock API warning in dev overlay
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      if (
+        typeof args[0] === 'string' &&
+        args[0].includes('THREE.PointerLockControls: Unable to use Pointer Lock API')
+      ) {
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
+
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    document.addEventListener('pointerlockerror', handlePointerLockError, { capture: true });
+
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      document.removeEventListener('pointerlockerror', handlePointerLockError, { capture: true });
+      console.error = originalConsoleError;
     };
   }, []);
 

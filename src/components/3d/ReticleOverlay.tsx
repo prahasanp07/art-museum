@@ -65,7 +65,7 @@ export function ReticleOverlay() {
         {/* Dynamic target inspection prompt */}
         {isAimingAtArtwork && (
           <div className="mt-4 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-400/50 backdrop-blur-md shadow-lg animate-in fade-in zoom-in-95 duration-150">
-            <span className="text-[11px] font-mono text-cyan-200 font-medium tracking-wide flex items-center gap-1.5">
+            <span className="text-[11px] text-cyan-200 font-medium tracking-wide flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
               Click to Inspect Artwork
             </span>
@@ -79,7 +79,7 @@ export function ReticleOverlay() {
       */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 pointer-events-none z-20">
         <div
-          className={`backdrop-blur-md border px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl transition-all duration-300 text-xs font-mono ${
+          className={`backdrop-blur-md border px-4 py-2 rounded-full flex items-center gap-2.5 shadow-2xl transition-all duration-300 text-xs font-medium ${
             isPointerLocked
               ? 'bg-black/70 border-emerald-500/30 text-slate-200'
               : 'bg-black/80 border-cyan-500/30 text-cyan-200'
@@ -95,10 +95,10 @@ export function ReticleOverlay() {
           {isPointerLocked ? (
             <span>
               Looking Mode Active &bull; Press{' '}
-              <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-semibold border border-white/20">
+              <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-semibold border border-white/20 font-mono text-[10px]">
                 ESC
               </kbd>{' '}
-              to release cursor &bull; WASD to move
+              to release cursor &bull; <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white font-semibold border border-white/20 font-mono text-[10px]">WASD</kbd> to move
             </span>
           ) : (
             <span>

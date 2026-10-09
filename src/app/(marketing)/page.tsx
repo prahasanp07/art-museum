@@ -16,10 +16,9 @@ export default function MarketingPage() {
 
         {/* 1. Hero Section */}
         <section className="max-w-5xl mx-auto text-center flex flex-col items-center relative z-10 pt-8 pb-20">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-xs font-mono uppercase tracking-widest mb-8">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            {/* <span>Next-Gen 3D Scrollytelling &bull; 60 FPS WebGL</span> */}
-            <span>THE NEW ERA OF DIGITAL EXHIBITIONS</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-xs font-medium mb-8 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span>The New Era of Digital Exhibitions</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-6 leading-[1.1]">

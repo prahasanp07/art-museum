@@ -7,6 +7,8 @@ export interface StoredGalleryData {
   gallery?: Partial<Gallery>;
   artworks?: Artwork[];
   slotMap?: Record<string, string | null>;
+  frameMap?: Record<string, string>;
+  frameDesignMap?: Record<string, string>;
 }
 
 const STORAGE_PREFIX = 'PraGana_gallery_v2_';
@@ -46,6 +48,8 @@ export function saveStoredGalleryData(
       gallery: { ...(current.gallery || {}), ...(data.gallery || {}) },
       artworks: data.artworks !== undefined ? data.artworks : (current.artworks || []),
       slotMap: { ...(current.slotMap || {}), ...(data.slotMap || {}) },
+      frameMap: { ...(current.frameMap || {}), ...(data.frameMap || {}) },
+      frameDesignMap: { ...(current.frameDesignMap || {}), ...(data.frameDesignMap || {}) },
     };
 
     const serialized = JSON.stringify(updated);
@@ -103,7 +107,7 @@ export function mergeGalleryWithStorage(
     });
   }
 
-  // 3. Resolve assigned slots
+  // 3. Resolve assigned slots and frame selections
   const mergedSlots = baseGallery.slots.map((slot) => {
     const assignedArtworkId =
       stored.slotMap && stored.slotMap[slot.slot_identifier] !== undefined
@@ -114,18 +118,67 @@ export function mergeGalleryWithStorage(
       ? artworksById.get(assignedArtworkId) ?? null
       : null;
 
+    const resolvedFrameGlbId =
+      stored.frameMap?.[slot.slot_identifier] ??
+      slot.frame_glb_id ??
+      'minimal-black';
+
+    const resolvedFrameDesignId =
+      stored.frameDesignMap?.[slot.slot_identifier] ??
+      slot.frame_design_id ??
+      'classic-box';
+
     return {
       ...slot,
       artwork_id: assignedArtworkId,
       artwork: resolvedArtwork,
+      frame_glb_id: resolvedFrameGlbId,
+      frame_design_id: resolvedFrameDesignId,
     };
   });
 
-  return {
+  // Also sync stored frameMap and frameDesignMap into interior_config.frames
+  const existingFrames = baseGallery.interior_config?.frames ?? [];
+  const updatedFrames = [...existingFrames];
+  if (stored.frameMap || stored.frameDesignMap) {
+    const allSlotIds = new Set([
+      ...Object.keys(stored.frameMap || {}),
+      ...Object.keys(stored.frameDesignMap || {}),
+    ]);
+    allSlotIds.forEach((slotId) => {
+      const frameId = stored.frameMap?.[slotId];
+      const designId = stored.frameDesignMap?.[slotId];
+      const idx = updatedFrames.findIndex((f: any) => f.slot_identifier === slotId);
+      if (idx >= 0) {
+        updatedFrames[idx] = {
+          ...updatedFrames[idx],
+          ...(frameId ? { frame_glb_id: frameId } : {}),
+          ...(designId ? { frame_design_id: designId } : {}),
+        };
+      } else {
+        updatedFrames.push({
+          slot_identifier: slotId,
+          frame_glb_id: frameId || 'minimal-black',
+          frame_design_id: designId || 'classic-box',
+        });
+      }
+    });
+  }
+
+  const mergedGallery = {
     ...baseGallery,
     ...(stored.gallery || {}),
     slots: mergedSlots,
   };
+
+  if (mergedGallery.interior_config) {
+    mergedGallery.interior_config = {
+      ...mergedGallery.interior_config,
+      frames: updatedFrames,
+    };
+  }
+
+  return mergedGallery;
 }
 
 /**

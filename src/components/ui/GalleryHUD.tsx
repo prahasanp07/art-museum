@@ -60,14 +60,14 @@ export function GalleryHUD({ title, artistName }: GalleryHUDProps) {
           <div className="w-[1px] h-4 bg-white/20" />
           <div className="flex flex-col">
             <span className="text-xs font-bold text-white tracking-wide">{title}</span>
-            <span className="text-[10px] text-cyan-300 font-mono">Curated by {artistName}</span>
+            <span className="text-[10px] text-cyan-300 font-medium">Curated by {artistName}</span>
           </div>
         </div>
 
         {/* Right Status Indicator (Offset to accommodate Navigation Mode switch button) */}
         <div className="pointer-events-auto backdrop-blur-md bg-black/50 border border-white/10 px-4 py-2 rounded-full flex items-center gap-3 shadow-xl mr-52">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-mono text-slate-300">60 FPS WebGL Engine</span>
+          <span className="text-xs font-medium text-slate-300">60 FPS WebGL Engine</span>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export function GalleryHUD({ title, artistName }: GalleryHUDProps) {
       {/* Bottom Control Bar */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
         {/* Corridor Quick-Jump Waypoints */}
-        <div className="pointer-events-auto backdrop-blur-md bg-black/50 border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl text-[11px] font-mono">
+        <div className="pointer-events-auto backdrop-blur-md bg-black/50 border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl text-[11px] font-medium">
           <button
             onClick={() => jumpToProgress(0.0)}
             className={`px-3 py-1 rounded-full transition-colors ${
@@ -112,9 +112,9 @@ export function GalleryHUD({ title, artistName }: GalleryHUDProps) {
 
         {/* Progress Bar & Instructions */}
         <div className="pointer-events-auto backdrop-blur-md bg-black/50 border border-white/10 px-5 py-2.5 rounded-full flex items-center gap-4 shadow-xl">
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
-            <span className="text-slate-400">DEPTH</span>
-            <span className="font-bold text-cyan-400">{percentage}%</span>
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <span className="text-slate-400 font-medium text-[11px]">DEPTH</span>
+            <span className="font-bold text-cyan-400 font-mono">{percentage}%</span>
           </div>
 
           {/* Progress Bar */}
@@ -125,7 +125,7 @@ export function GalleryHUD({ title, artistName }: GalleryHUDProps) {
             />
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-slate-400 border-l border-white/10 pl-3">
+          <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-medium text-slate-400 border-l border-white/10 pl-3">
             <span>Scroll to navigate</span>
             <span>&bull;</span>
             <span>Click art to inspect</span>

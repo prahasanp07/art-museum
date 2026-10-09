@@ -15,8 +15,35 @@ export interface ActiveProp {
 }
 
 export interface GalleryFrameConfig {
-  artwork_id: string;
+  artwork_id?: string;
+  slot_identifier?: string;
   frame_glb_id: string;
+  frame_design_id?: string;
+}
+
+export interface FrameProfile {
+  id: string;
+  name: string;
+  roughness: number;
+  metalness: number;
+  color: string;
+  border?: number;
+  depth?: number;
+  description?: string;
+}
+
+export interface FrameDesign {
+  id: string;
+  name: string;
+  tag: string;
+  description: string;
+  borderMultiplier?: number;
+  depthMultiplier?: number;
+  floatingGap?: number;
+  hasMat?: boolean;
+  matColor?: string;
+  matWidth?: number;
+  steps?: number;
 }
 
 export interface GalleryInteriorConfig {
@@ -47,6 +74,8 @@ export interface Artwork {
   description: string | null;
   storage_url: string;
   external_link: string | null;
+  frame_glb_id?: string;
+  frame_design_id?: string;
   created_at: string;
 }
 
@@ -57,6 +86,8 @@ export interface GallerySlot {
   slot_identifier: string;
   created_at: string;
   artwork?: Artwork | null;
+  frame_glb_id?: string;
+  frame_design_id?: string;
 }
 
 export interface SlotConfiguration {

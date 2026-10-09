@@ -244,9 +244,9 @@ function MinimalistCubeProcedural() {
         />
       </mesh>
 
-      {/* Central Division Baffle */}
-      <mesh position={[0, 2.0, -10.0]} castShadow={false} receiveShadow={false}>
-        <boxGeometry args={[4.0, 4.0, 0.2]} />
+      {/* Central Division Baffle backing slot-03 at z = -14.8 */}
+      <mesh position={[0, 2.0, -15.0]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[4.2, 4.0, 0.2]} />
         <meshStandardMaterial
           color="#1e293b"
           roughness={0.65}
@@ -260,12 +260,30 @@ function MinimalistCubeProcedural() {
 
 /**
  * Procedural Solarium Rotunda environment:
- * Luminous warm atmosphere with simulated overhead skylights.
+ * High luminous ceiling (5.5m) with overhead glass skylight canopy,
+ * steel structural truss mullions, and classical architectural wall pilasters.
  */
 function SolariumRotundaProcedural() {
+  const skylightZPositions = useMemo(() => [10, 3, -4, -11, -18, -25], []);
+  const pilasterPositions = useMemo(
+    () => [
+      [-4.85, 2.75, 7.5],
+      [4.85, 2.75, 7.5],
+      [-4.85, 2.75, -3.0],
+      [4.85, 2.75, -3.0],
+      [-4.85, 2.75, -10.0],
+      [4.85, 2.75, -10.0],
+      [-4.85, 2.75, -17.5],
+      [4.85, 2.75, -17.5],
+      [-4.85, 2.75, -24.5],
+      [4.85, 2.75, -24.5],
+    ],
+    []
+  );
+
   return (
     <group name="solarium-rotunda-environment">
-      {/* Floor: Polished warm terrazzo stone */}
+      {/* 1. Floor: Polished warm stone foundation */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, -10]}
@@ -281,24 +299,71 @@ function SolariumRotundaProcedural() {
         />
       </mesh>
 
-      {/* Ceiling with simulated glass skylight grids */}
+      {/* 2. Overhead Skylight Canopy (5.5m clearance with soft daylight diffusion) */}
       <mesh
         rotation={[Math.PI / 2, 0, 0]}
-        position={[0, 5.0, -10]}
+        position={[0, 5.5, -10]}
         castShadow={false}
         receiveShadow={false}
       >
         <planeGeometry args={[20, 60]} />
         <meshStandardMaterial
-          color="#1e293b"
-          roughness={0.3}
-          metalness={0.4}
+          color="#384c66"
+          roughness={0.25}
+          metalness={0.45}
         />
       </mesh>
 
-      {/* Walls: Soft gallery white/stone */}
-      <mesh position={[5.0, 2.5, -10]} castShadow={false} receiveShadow={false}>
-        <boxGeometry args={[0.2, 5.0, 60]} />
+      {/* 3. Luminous Skylight Glass Glazing Center Strip */}
+      <mesh
+        rotation={[Math.PI / 2, 0, 0]}
+        position={[0, 5.48, -10]}
+        castShadow={false}
+        receiveShadow={false}
+      >
+        <planeGeometry args={[7, 56]} />
+        <meshBasicMaterial color="#94b8db" transparent opacity={0.65} />
+      </mesh>
+
+      {/* 4. Longitudinal Steel Truss Chords */}
+      <mesh position={[-3.5, 5.35, -10]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[0.25, 0.25, 58]} />
+        <meshStandardMaterial color="#334155" roughness={0.5} metalness={0.7} />
+      </mesh>
+      <mesh position={[3.5, 5.35, -10]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[0.25, 0.25, 58]} />
+        <meshStandardMaterial color="#334155" roughness={0.5} metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 5.38, -10]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[0.2, 0.2, 58]} />
+        <meshStandardMaterial color="#475569" roughness={0.4} metalness={0.8} />
+      </mesh>
+
+      {/* 5. Transverse Steel Skylight Truss Ribs */}
+      {skylightZPositions.map((z) => (
+        <group key={`truss-${z}`} position={[0, 5.35, z]}>
+          <mesh castShadow={false} receiveShadow={false}>
+            <boxGeometry args={[7.2, 0.22, 0.22]} />
+            <meshStandardMaterial color="#334155" roughness={0.5} metalness={0.7} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* 6. Classical Pilasters framing the gallery walls */}
+      {pilasterPositions.map(([x, y, z], i) => (
+        <mesh key={`pilaster-${i}`} position={[x, y, z]} castShadow={false} receiveShadow={false}>
+          <boxGeometry args={[0.22, 5.5, 0.45]} />
+          <meshStandardMaterial
+            color="#475569"
+            roughness={0.65}
+            metalness={0.2}
+          />
+        </mesh>
+      ))}
+
+      {/* 7. Gallery Walls (5.5m height) */}
+      <mesh position={[5.0, 2.75, -10]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[0.2, 5.5, 60]} />
         <meshStandardMaterial
           color="#334155"
           roughness={0.65}
@@ -307,8 +372,8 @@ function SolariumRotundaProcedural() {
         />
       </mesh>
 
-      <mesh position={[-5.0, 2.5, -10]} castShadow={false} receiveShadow={false}>
-        <boxGeometry args={[0.2, 5.0, 60]} />
+      <mesh position={[-5.0, 2.75, -10]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[0.2, 5.5, 60]} />
         <meshStandardMaterial
           color="#334155"
           roughness={0.65}
@@ -318,8 +383,8 @@ function SolariumRotundaProcedural() {
       </mesh>
 
       {/* North & South Walls */}
-      <mesh position={[0, 2.5, -28.0]} castShadow={false} receiveShadow={false}>
-        <boxGeometry args={[10.2, 5.0, 0.2]} />
+      <mesh position={[0, 2.75, -28.0]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[10.2, 5.5, 0.2]} />
         <meshStandardMaterial
           color="#1e293b"
           roughness={0.7}
@@ -328,8 +393,8 @@ function SolariumRotundaProcedural() {
         />
       </mesh>
 
-      <mesh position={[0, 2.5, 15.0]} castShadow={false} receiveShadow={false}>
-        <boxGeometry args={[10.2, 5.0, 0.2]} />
+      <mesh position={[0, 2.75, 15.0]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[10.2, 5.5, 0.2]} />
         <meshStandardMaterial
           color="#1e293b"
           roughness={0.7}
@@ -338,9 +403,9 @@ function SolariumRotundaProcedural() {
         />
       </mesh>
 
-      {/* Central Division Baffle backing slot-03 */}
-      <mesh position={[0, 2.5, -15.0]} castShadow={false} receiveShadow={false}>
-        <boxGeometry args={[4.0, 4.5, 0.2]} />
+      {/* Central Division Baffle backing slot-03 at z = -14.8 */}
+      <mesh position={[0, 2.75, -15.0]} castShadow={false} receiveShadow={false}>
+        <boxGeometry args={[4.2, 5.5, 0.2]} />
         <meshStandardMaterial
           color="#26334d"
           roughness={0.6}
